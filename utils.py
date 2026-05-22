@@ -47,6 +47,9 @@ def get_plan_name(days):
 async def send_update(title, year):
     if not UPDATES_SEND_CHANNEL:
         return
+    btn = [[
+        InlineKeyboardButton('📥 Request from Here 📥', url=FILMS_LINK)
+    ]]
     data = await get_poster(f"{title} {year}")
     if not data:
         _year = f"({year})" if year else ""
@@ -67,9 +70,7 @@ async def send_update(title, year):
         languages=data['languages'],
         countries=data['countries']
     )
-    btn = [[
-        InlineKeyboardButton('📥 Request from Here 📥', url=FILMS_LINK)
-    ]]
+    
     if data.get('poster'):
         await temp.BOT.send_photo(chat_id=UPDATES_SEND_CHANNEL, photo=data.get('poster'), caption=caption, reply_markup=InlineKeyboardMarkup(btn))
     else:

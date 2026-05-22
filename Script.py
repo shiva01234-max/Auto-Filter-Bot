@@ -95,7 +95,8 @@ Just try my commands"""
 /rm_prm - to add remove premium user
 /delreq - to delete join request in db (if change REQUEST_FORCE_SUB_CHANNELS using /set_req_fsub then must need use this command)
 /set_req_fsub - to set request force subscribe channel
-/set_fsub - to set force subscribe channels</b>"""
+/set_fsub - to set force subscribe channels
+/repairmode - to enable/disable maintenance mode in bot</b>"""
     
     PLAN_TXT = """Activate any premium plan to get exclusive features.
 

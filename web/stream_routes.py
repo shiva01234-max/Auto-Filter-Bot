@@ -1,16 +1,19 @@
 import math
 import secrets
 import mimetypes
-from info import BIN_CHANNEL, MAX_BTN, PREMIUM_PLANS, PAYMENT_QR_CODE, PAYMENT_ID, PAYMENT_TYPE, OWNER_USERNAME
+from info import BIN_CHANNEL, MAX_BTN, PREMIUM_PLANS, PAYMENT_QR_CODE, PAYMENT_ID, PAYMENT_TYPE, OWNER_USERNAME, TMDB_API_KEY
 from utils import temp, get_size, handle_next_back, get_plan_name
 from aiohttp import web
 from web.utils.custom_dl import TGCustomYield, chunk_size, offset_fix
-from web.utils.render_template import media_watch, error_tmplt, webapp_template, payment_template
+from web.utils.render_template import media_watch, error_tmplt, webapp_template, payment_template, no_tmdb_template
 from database.ia_filterdb import get_search_results
-import json, io
+from database.users_chats_db import db
+import json, io, aiohttp
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 routes = web.RouteTableDef()
+
+TMDB_BASE = "https://api.themoviedb.org/3"
 
 @routes.get("/watch/{message_id}")
 async def watch_handler(request):
@@ -31,6 +34,8 @@ async def download_handler(request):
 
 @routes.get("/", allow_head=True)
 async def webapp_route_handler(request):
+    if not TMDB_API_KEY:
+        return web.Response(text=no_tmdb_template, content_type='text/html')
     return web.Response(text=webapp_template, content_type='text/html')
 
 
@@ -111,6 +116,106 @@ async def api_search_handler(request):
         "max_btn": MAX_BTN,
         "bot_username": temp.U_NAME
     })
+
+
+@routes.get("/api/tmdb-search")
+async def tmdb_search_handler(request):
+    if not TMDB_API_KEY:
+        return web.json_response({"results": [], "error": "TMDB API key not configured"}, status=503)
+    query = request.query.get('q', '').strip()
+    page = request.query.get('page', '1')
+    if not query:
+        return web.json_response({"results": []})
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{TMDB_BASE}/search/multi",
+                params={"api_key": TMDB_API_KEY, "query": query, "page": page, "include_adult": "true"}
+            ) as resp:
+                data = await resp.json()
+        results = []
+        for r in data.get("results", []):
+            if r.get("media_type") not in ["movie", "tv"]:
+                continue
+            title = r.get("title") or r.get("name", "")
+            date = r.get("release_date") or r.get("first_air_date", "")
+            year = date[:4] if date else ""
+            poster = f"https://image.tmdb.org/t/p/w342{r['poster_path']}" if r.get("poster_path") else None
+            backdrop = f"https://image.tmdb.org/t/p/w1280{r['backdrop_path']}" if r.get("backdrop_path") else None
+            results.append({
+                "id": r["id"],
+                "title": title,
+                "year": year,
+                "type": r["media_type"],
+                "rating": round(r.get("vote_average", 0), 1),
+                "poster": poster,
+                "backdrop": backdrop,
+                "overview": r.get("overview", ""),
+                "genres": r.get("genre_ids", [])
+            })
+        return web.json_response({"results": results, "total_pages": data.get("total_pages", 1)})
+    except Exception as e:
+        return web.json_response({"results": [], "error": str(e)}, status=500)
+
+
+@routes.get("/api/tmdb-trending")
+async def tmdb_trending_handler(request):
+    if not TMDB_API_KEY:
+        return web.json_response({"error": "TMDB API key not configured"}, status=503)
+    try:
+        async with aiohttp.ClientSession() as session:
+            urls = [
+                (f"{TMDB_BASE}/trending/all/week", {"api_key": TMDB_API_KEY}),
+                (f"{TMDB_BASE}/movie/popular", {"api_key": TMDB_API_KEY, "page": "1"}),
+                (f"{TMDB_BASE}/tv/popular", {"api_key": TMDB_API_KEY, "page": "1"}),
+                (f"{TMDB_BASE}/movie/top_rated", {"api_key": TMDB_API_KEY, "page": "1"}),
+            ]
+            responses = []
+            for url, params in urls:
+                async with session.get(url, params=params) as r:
+                    responses.append(await r.json())
+
+        def fmt(items, media_type=None):
+            out = []
+            for r in items[:20]:
+                mt = media_type or r.get("media_type", "movie")
+                title = r.get("title") or r.get("name", "")
+                date = r.get("release_date") or r.get("first_air_date", "")
+                year = date[:4] if date else ""
+                poster = f"https://image.tmdb.org/t/p/w342{r['poster_path']}" if r.get("poster_path") else None
+                backdrop = f"https://image.tmdb.org/t/p/w1280{r['backdrop_path']}" if r.get("backdrop_path") else None
+                out.append({
+                    "id": r["id"], "title": title, "year": year, "type": mt,
+                    "rating": round(r.get("vote_average", 0), 1),
+                    "poster": poster, "backdrop": backdrop,
+                    "overview": r.get("overview", ""),
+                    "genres": r.get("genre_ids", [])
+                })
+            return out
+
+        trending_all = fmt(responses[0].get("results", []))
+        popular_movies = fmt(responses[1].get("results", []), "movie")
+        popular_tv = fmt(responses[2].get("results", []), "tv")
+        top_rated = fmt(responses[3].get("results", []), "movie")
+
+        hero = next((x for x in trending_all if x["backdrop"]), trending_all[0] if trending_all else None)
+
+        return web.json_response({
+            "hero": hero,
+            "trending": trending_all,
+            "popular_movies": popular_movies,
+            "popular_tv": popular_tv,
+            "top_rated": top_rated,
+            "bot_username": temp.U_NAME
+        })
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
+
+@routes.get("/api/repair-status")
+async def repair_status_handler(request):
+    repair = await db.get_repair_mode()
+    return web.json_response({"repair_mode": repair})
 
 
 async def media_download(request, message_id: int):

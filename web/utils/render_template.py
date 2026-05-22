@@ -11,452 +11,1115 @@ webapp_template = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Media Search</title>
+    <title>HA Bots - Entertainment</title>
+    <meta name="description" content="Browse trending movies and TV shows. Find and download files instantly.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg-main: #141414;
-            --accent: #E50914;
-            --accent-hover: #C11119;
-            --text-main: #FFFFFF;
-            --text-muted: #B3B3B3;
-            --input-bg: #333333;
-            --card-bg: #222222;
-            --card-hover: #2F2F2F;
+            --bg: #0a0a0f;
+            --bg2: #111118;
+            --card: #16161f;
+            --card2: #1e1e2a;
+            --border: rgba(255,255,255,0.07);
+            --accent: #e50914;
+            --accent2: #ff6b35;
+            --gold: #f5c518;
+            --text: #ffffff;
+            --text2: #b0b0c0;
+            --text3: #666680;
+            --glass: rgba(10,10,20,0.85);
+            --radius: 12px;
+            --radius-sm: 8px;
         }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        html { scroll-behavior: smooth; }
 
         body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background-color: var(--bg-main);
-            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
-            padding: 24px 16px;
-            padding-bottom: 90px;
+            overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
         }
 
-        .header {
-            margin-bottom: 24px;
-            text-align: left;
-            animation: fadeInDown 0.5s ease;
+        /* ── NAVBAR ── */
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: env(safe-area-inset-top, 0px) 20px 0; height: calc(60px + env(safe-area-inset-top, 0px));
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, transparent 100%);
+            transition: background 0.3s;
         }
-
-        .greeting {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 6px;
-            letter-spacing: -0.5px;
+        .navbar.solid { background: var(--bg); border-bottom: 1px solid var(--border); }
+        .nav-logo {
+            font-size: 18px; font-weight: 900; letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #fff 0%, var(--accent) 60%, var(--accent2) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            white-space: nowrap;
         }
-
-        .greeting-name { color: var(--accent); }
-        .subtitle { font-size: 15px; color: var(--text-muted); font-weight: 400; }
-
-        .search-container {
-            display: flex;
-            gap: 10px;
-            position: sticky;
-            top: 10px;
-            z-index: 10;
-            margin-bottom: 20px;
-            background: var(--bg-main);
-            padding: 10px 0;
-            animation: fadeInUp 0.5s ease 0.1s both;
+        .nav-right { display: flex; align-items: center; gap: 6px; }
+        .nav-search-toggle {
+            background: none; border: none; color: var(--text2); cursor: pointer;
+            width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; transition: background 0.2s, color 0.2s;
         }
+        .nav-search-toggle:hover { background: var(--card2); color: #fff; }
 
-        .input-wrapper {
-            position: relative;
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
+        /* ── SEARCH OVERLAY ── */
+        .search-overlay {
+            position: fixed; inset: 0; z-index: 200;
+            background: rgba(10,10,15,0.95); backdrop-filter: blur(32px);
+            display: flex; flex-direction: column;
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            padding: 0;
         }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 16px 45px 16px 20px;
-            border-radius: 4px;
-            border: 1px solid transparent;
-            background: var(--input-bg);
-            color: var(--text-main);
-            font-size: 16px;
-            outline: none;
-            transition: all 0.2s ease;
-        }
-
-        input[type="text"]:focus { background: #404040; border-color: #555; }
-        input[type="text"]::placeholder { color: #8C8C8C; }
-
-        .clear-icon {
-            position: absolute;
-            right: 14px;
-            width: 20px;
-            height: 20px;
-            color: #8C8C8C;
-            cursor: pointer;
-            display: none;
-            transition: color 0.2s;
-        }
-
-        .clear-icon:hover { color: #FFFFFF; }
-
-        .search-btn {
-            background: var(--accent);
-            color: #ffffff;
-            border: none;
-            border-radius: 4px;
-            padding: 0 24px;
-            font-weight: 600;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .search-btn:hover { background: var(--accent-hover); }
-        .search-btn:active { transform: scale(0.98); }
-
-        .section-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: var(--text-main);
-            animation: fadeInDown 0.4s ease;
-        }
-
-        .results-container {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .file-card {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--card-bg);
-            border-radius: 4px;
-            padding: 16px 20px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            animation: fadeInUp 0.4s ease;
-            border-left: 4px solid transparent;
-        }
-
-        .file-card:hover {
-            background: var(--card-hover);
-            border-left: 4px solid var(--accent);
-        }
-
-        .file-card:active { background: #404040; }
-
-        .file-info {
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            padding-right: 15px;
-        }
-
-        .file-name {
-            font-weight: 500;
-            font-size: 16px;
-            line-height: 1.4;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            margin-bottom: 6px;
-            color: var(--text-main);
-        }
-
-        .file-size { font-size: 13px; font-weight: 500; color: var(--text-muted); }
-
-        .get-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            background: transparent;
-            border: 2px solid var(--text-muted);
-            color: var(--text-muted);
-            border-radius: 50%;
-            font-size: 18px;
+        .search-overlay.open { opacity: 1; visibility: visible; }
+        /* Top bar: search input + cancel button side-by-side */
+        .search-top-bar {
+            display: flex; align-items: center; gap: 10px;
+            /* Use safe-area fallback; in Telegram add extra top space */
+            padding: calc(52px + env(safe-area-inset-top, 0px)) 16px 12px;
             flex-shrink: 0;
-            transition: all 0.2s;
         }
+        .search-field-wrap {
+            display: flex; align-items: center; gap: 10px;
+            background: var(--card2); border-radius: var(--radius);
+            border: 1px solid var(--border); padding: 0 14px;
+            flex: 1; min-width: 0;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+        .search-field-wrap:focus-within {
+            border-color: rgba(229, 9, 20, 0.4);
+            box-shadow: 0 0 14px rgba(229, 9, 20, 0.25);
+        }
+        .search-field-wrap svg { color: var(--text3); flex-shrink: 0; }
+        .search-field {
+            flex: 1; background: none; border: none; outline: none;
+            color: #fff; font-family: 'Outfit', sans-serif; font-size: 16px;
+            padding: 14px 0; min-width: 0;
+        }
+        .search-field::placeholder { color: var(--text3); }
+        .search-close {
+            background: none; border: none; color: var(--accent); cursor: pointer;
+            font-size: 15px; font-weight: 700; white-space: nowrap;
+            padding: 8px 4px; flex-shrink: 0;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        .search-close:hover { opacity: 0.8; }
+        .search-close:active { transform: scale(0.96); }
+
+        /* Search meta bar */
+        .search-meta-bar {
+            padding: 0 16px 12px; flex-shrink: 0;
+            font-size: 12px; color: var(--text3); letter-spacing: 0.2px;
+        }
+        .search-meta-bar b { color: var(--text2); }
+
+        /* Premium search results grid (3 columns on mobile) */
+        .search-results-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px; overflow-y: auto; flex: 1;
+            padding: 0 16px 60px; align-content: start;
+        }
+
+        /* Override poster card styles when inside search grid to make them fluid */
+        .search-results-grid .poster-card {
+            width: 100%;
+            margin: 0 !important; /* Reset horizontal scroll margin spacing */
+        }
+        .search-results-grid .poster-img-wrap {
+            width: 100%;
+            height: 0;
+            padding-bottom: 150%; /* Strict 2:3 portrait aspect ratio */
+            position: relative;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+        .search-results-grid .poster-img-wrap img,
+        .search-results-grid .poster-img-wrap .poster-placeholder {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .search-hint {
+            text-align: center; color: var(--text3); font-size: 14px;
+            padding: 60px 20px; grid-column: 1 / -1;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .search-hint svg { display: block; margin: 0 auto 16px; opacity: 0.25; }
+
+        /* ── HERO ── */
+        .hero {
+            position: relative; width: 100%;
+            /* tall enough to show behind navbar + full content */
+            height: calc(75vw + 60px); max-height: 560px; min-height: 400px;
+            overflow: hidden; margin-top: 0;
+        }
+        .hero-bg {
+            position: absolute; inset: 0;
+            background-size: cover; background-position: center top;
+            transition: opacity 1s ease;
+        }
+        .hero-gradient {
+            position: absolute; inset: 0;
+            background: linear-gradient(
+                0deg,
+                var(--bg) 0%,
+                rgba(10,10,15,0.7) 40%,
+                rgba(10,10,15,0.2) 70%,
+                rgba(10,10,15,0.5) 100%
+            );
+        }
+        .hero-gradient-side {
+            position: absolute; inset: 0;
+            background: linear-gradient(90deg, rgba(10,10,15,0.8) 0%, transparent 50%);
+        }
+        .hero-content {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 0 20px 32px;
+        }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: var(--accent); color: #fff;
+            font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+            padding: 3px 10px; border-radius: 3px; text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .hero-title {
+            font-size: clamp(22px, 6vw, 38px); font-weight: 800;
+            line-height: 1.1; letter-spacing: -0.5px;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.8);
+            margin-bottom: 8px;
+            max-width: 75%;
+        }
+        .hero-meta {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 13px; color: var(--text2); margin-bottom: 16px;
+        }
+        .hero-meta .rating { color: var(--gold); font-weight: 700; }
+        .hero-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text3); }
+        .hero-overview {
+            font-size: 13px; color: var(--text2); line-height: 1.5;
+            max-width: 75%; display: -webkit-box;
+            -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+            margin-bottom: 16px;
+        }
+        .hero-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--accent); color: #fff;
+            padding: 12px 26px; border-radius: var(--radius);
+            font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
+            border: none; cursor: pointer;
+            transition: background 0.25s, transform 0.15s, box-shadow 0.25s;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            box-shadow: 0 4px 14px rgba(229, 9, 20, 0.3);
+        }
+        .hero-btn:hover { background: #ff0f1b; box-shadow: 0 6px 20px rgba(229, 9, 20, 0.45); }
+        .hero-btn:active { transform: scale(0.97); }
+        .hero-dots {
+            display: flex; gap: 6px; margin-top: 16px;
+        }
+        .hero-dot {
+            width: 24px; height: 3px; border-radius: 2px;
+            background: rgba(255,255,255,0.25); cursor: pointer;
+            transition: background 0.3s, width 0.3s;
+        }
+        .hero-dot.active { background: var(--accent); width: 36px; }
+
+        /* ── MAIN CONTENT ── */
+        .main { padding: 0 0 20px; }
+
+        /* ── ROWS ── */
+        .row-section { margin-bottom: 32px; }
+        .row-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px; margin-bottom: 14px;
+        }
+        .row-title {
+            font-size: 17px; font-weight: 700; letter-spacing: -0.2px;
+            color: #fff;
+        }
+        .row-title span {
+            display: inline-block; width: 4px; height: 16px;
+            background: var(--accent); border-radius: 2px; margin-right: 8px;
+            vertical-align: middle;
+        }
+        .row-see-all {
+            font-size: 12px; color: var(--text3); cursor: pointer;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        /* PC: show thin custom scrollbar, mobile: hide */
+        .poster-scroll {
+            display: flex; gap: 12px; overflow-x: auto;
+            padding: 12px 16px 20px;
+            scroll-snap-type: x mandatory;
+            scroll-padding: 0 16px;
+            cursor: grab;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(229,9,20,0.4) transparent;
+        }
+        .poster-scroll:active { cursor: grabbing; }
+        .poster-scroll::-webkit-scrollbar { height: 4px; }
+        .poster-scroll::-webkit-scrollbar-track { background: transparent; }
+        .poster-scroll::-webkit-scrollbar-thumb { background: rgba(229,9,20,0.4); border-radius: 2px; }
+        @media (pointer: coarse) {
+            .poster-scroll { scrollbar-width: none; }
+            .poster-scroll::-webkit-scrollbar { display: none; }
+        }
+
+        /* ── POSTER CARD ── */
+        .poster-card {
+            flex-shrink: 0; width: 120px; scroll-snap-align: start;
+            cursor: pointer; position: relative;
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
+        }
+        .poster-card:hover {
+            transform: translateY(-5px) scale(1.04);
+            z-index: 5;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+        }
+        .poster-card:active { transform: scale(0.97); }
+        .poster-img-wrap {
+            width: 120px; height: 178px; border-radius: var(--radius-sm);
+            overflow: hidden; background: var(--card2);
+            position: relative;
+            border: 1px solid var(--border);
+            transition: border-color 0.3s ease;
+        }
+        .poster-card:hover .poster-img-wrap {
+            border-color: rgba(229, 9, 20, 0.4);
+        }
+        .poster-img {
+            width: 100%; height: 100%; object-fit: cover;
+            transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .poster-card:hover .poster-img {
+            transform: scale(1.06);
+        }
+        .poster-placeholder {
+            width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #1e1e2f 0%, #11111d 100%);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            color: var(--text3); font-size: 30px;
+            border-radius: var(--radius-sm);
+        }
+        .poster-rating {
+            position: absolute; top: 6px; right: 6px;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+            color: var(--gold); font-size: 10px; font-weight: 700;
+            padding: 2px 6px; border-radius: 4px;
+            display: flex; align-items: center; gap: 3px;
+        }
+        .poster-type-badge {
+            position: absolute; bottom: 6px; left: 6px;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+            color: var(--text2); font-size: 9px; font-weight: 600;
+            padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .poster-title {
+            font-size: 11px; font-weight: 600; color: var(--text2);
+            margin-top: 7px; line-height: 1.3;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .poster-year { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+        /* ── FILE MODAL ── */
+        .modal-backdrop {
+            position: fixed; inset: 0; z-index: 300;
+            background: rgba(0,0,0,0.88); backdrop-filter: blur(16px);
+            display: flex; align-items: flex-end; justify-content: center;
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .modal-backdrop.open { opacity: 1; visibility: visible; }
+        .modal-sheet {
+            background: var(--card); border-radius: 20px 20px 0 0;
+            width: 100%; max-width: 600px; max-height: 85vh;
+            display: flex; flex-direction: column;
+            transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+            overflow: hidden;
+        }
+        .modal-backdrop.open .modal-sheet { transform: translateY(0); }
+        .modal-handle {
+            width: 36px; height: 4px; background: var(--text3);
+            border-radius: 2px; margin: 14px auto 0; flex-shrink: 0;
+        }
+        .modal-header {
+            display: flex; align-items: flex-start; gap: 14px;
+            padding: 16px 20px; flex-shrink: 0;
+        }
+        .modal-poster {
+            width: 64px; height: 95px; border-radius: var(--radius-sm);
+            object-fit: cover; flex-shrink: 0; background: var(--card2);
+        }
+        .modal-poster-placeholder {
+            width: 64px; height: 95px; border-radius: var(--radius-sm);
+            background: var(--card2); display: flex; align-items: center;
+            justify-content: center; font-size: 24px; flex-shrink: 0;
+        }
+        .modal-info { flex: 1; min-width: 0; }
+        .modal-title {
+            font-size: 18px; font-weight: 800; line-height: 1.2;
+            margin-bottom: 5px; letter-spacing: -0.3px;
+        }
+        .modal-meta {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 12px; color: var(--text2); margin-bottom: 8px;
+        }
+        .modal-meta .rating { color: var(--gold); font-weight: 700; }
+        .modal-overview {
+            font-size: 12px; color: var(--text3); line-height: 1.5;
+            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .modal-close-btn {
+            width: 32px; height: 32px; flex-shrink: 0; background: var(--card2);
+            border: none; border-radius: 50%; cursor: pointer; color: var(--text2);
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s, color 0.2s, transform 0.2s;
+        }
+        .modal-close-btn:hover { background: var(--border); color: #fff; transform: rotate(90deg); }
+        .modal-divider { height: 1px; background: var(--border); flex-shrink: 0; }
+        .modal-files-label {
+            padding: 14px 20px 10px; font-size: 12px; font-weight: 700;
+            color: var(--text3); text-transform: uppercase; letter-spacing: 1px;
+            flex-shrink: 0;
+        }
+        .modal-files {
+            overflow-y: auto; flex: 1; padding: 0 12px 20px;
+        }
+        .file-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 12px; border-radius: var(--radius);
+            cursor: pointer; transition: background 0.2s, transform 0.1s;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 4px;
+        }
+        .file-item:last-child { border-bottom: none; }
+        .file-item:hover { background: var(--card2); transform: translateX(2px); }
+        .file-item:active { background: rgba(229,9,20,0.1); transform: scale(0.99); }
         
-        .file-card:hover .get-icon {
-            border-color: var(--text-main);
-            color: var(--text-main);
-            background: rgba(255, 255, 255, 0.1);
+        /* Genre pills in modal */
+        .modal-genres {
+            display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0;
         }
-
-        .pagination {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: calc(100% - 32px);
-            max-width: 400px;
-            display: none;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(20, 20, 20, 0.95);
-            padding: 12px 16px;
-            border-radius: 8px;
-            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.8);
-            z-index: 20;
+        .genre-pill {
+            background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+            color: var(--text2); font-size: 10px; font-weight: 600;
+            padding: 3px 8px; border-radius: 20px;
+            letter-spacing: 0.2px;
         }
-
-        .page-btn {
-            background: var(--card-bg);
-            color: var(--text-main);
-            border: 1px solid #404040;
-            padding: 10px 20px;
-            border-radius: 4px;
-            font-weight: 500;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
+        .file-icon {
+            width: 38px; height: 38px; border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
         }
-
-        .page-btn:hover:not(:disabled) {
-            background: var(--card-hover);
-            border-color: var(--text-muted);
+        .file-item-info { flex: 1; min-width: 0; }
+        .file-item-name {
+            font-size: 13px; font-weight: 600; color: #fff;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden; line-height: 1.4; margin-bottom: 3px;
         }
-
-        .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        .page-indicator { font-weight: 500; font-size: 15px; color: var(--text-main); }
-
-        .loader {
-            text-align: center;
-            padding: 40px 20px;
+        .file-item-size { font-size: 11px; color: var(--text3); font-weight: 500; }
+        .file-item-get {
+            width: 30px; height: 30px; flex-shrink: 0;
+            background: rgba(229,9,20,0.15); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
             color: var(--accent);
-            font-weight: 500;
-            display: none;
-            animation: pulse 1.5s infinite;
+        }
+        .modal-loading {
+            text-align: center; padding: 40px 20px; color: var(--text3);
+            font-size: 14px;
+        }
+        .modal-empty {
+            text-align: center; padding: 40px 20px;
+        }
+        .modal-empty-icon { font-size: 40px; margin-bottom: 12px; }
+        .modal-empty-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+        .modal-empty-sub { font-size: 13px; color: var(--text3); line-height: 1.5; }
+
+        /* ── REPAIR OVERLAY ── */
+        .repair-overlay {
+            position: fixed; inset: 0; z-index: 500;
+            background: var(--bg);
+            display: none; align-items: center; justify-content: center;
+            flex-direction: column; text-align: center; padding: 40px 30px;
+        }
+        .repair-overlay.show { display: flex; }
+        .repair-icon { font-size: 72px; margin-bottom: 24px; }
+        .repair-title { font-size: 26px; font-weight: 800; margin-bottom: 10px; }
+        .repair-sub { font-size: 15px; color: var(--text2); line-height: 1.6; max-width: 320px; }
+
+        /* ── SKELETON ── */
+        .skel { background: linear-gradient(90deg, var(--card) 25%, var(--card2) 50%, var(--card) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: var(--radius-sm); }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+        .skel-poster { width: 120px; height: 178px; border-radius: var(--radius-sm); flex-shrink: 0; }
+        .skel-text { height: 12px; border-radius: 6px; margin-top: 8px; }
+
+        /* ── SPINNER ── */
+        .spinner {
+            width: 28px; height: 28px; border: 3px solid var(--border);
+            border-top-color: var(--accent); border-radius: 50%;
+            animation: spin 0.7s linear infinite; margin: 0 auto 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── FADE ANIMATIONS ── */
+        @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        .fade-up { animation: fadeUp 0.4s ease both; }
+
+        /* ── TOAST ── */
+        .toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+            background: var(--card2); border: 1px solid var(--border);
+            color: #fff; font-size: 13px; font-weight: 600;
+            padding: 10px 20px; border-radius: 20px;
+            opacity: 0; transition: opacity 0.3s, transform 0.3s; z-index: 999;
+            white-space: nowrap;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ── FOOTER ── */
+        .site-footer {
+            background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%);
+            border-top: 1px solid var(--border);
+            padding: 36px 24px 40px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .footer-logo {
+            font-size: 20px; font-weight: 900; letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #fff 0%, var(--accent) 60%, var(--accent2) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            display: inline-block; margin-bottom: 8px;
+        }
+        .footer-tagline {
+            font-size: 12px; color: var(--text3); margin-bottom: 20px; letter-spacing: 0.3px;
+        }
+        .footer-links {
+            display: flex; align-items: center; justify-content: center;
+            gap: 20px; margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .footer-link {
+            font-size: 12px; color: var(--text2); text-decoration: none; font-weight: 600;
+            letter-spacing: 0.3px; transition: color 0.2s;
+        }
+        .footer-link:hover { color: var(--accent); }
+        .footer-divider {
+            width: 40px; height: 2px; border-radius: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            margin: 0 auto 16px;
+        }
+        .footer-copy {
+            font-size: 11px; color: var(--text3); line-height: 1.6;
+        }
+        .footer-powered {
+            display: inline-flex; align-items: center; gap: 5px;
+            font-size: 11px; color: var(--text3); margin-top: 6px;
+        }
+        .footer-powered a { color: var(--accent); text-decoration: none; font-weight: 700; }
+        .footer-tmdb {
+            font-size: 10px; color: var(--text3); margin-top: 8px; opacity: 0.6;
         }
 
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        @media (min-width: 600px) {
+            .poster-card { width: 150px; }
+            .poster-img-wrap { width: 150px; height: 224px; }
+            .skel-poster { width: 150px; height: 224px; }
+            .search-top-bar { padding-top: 80px; padding-left: 24px; padding-right: 24px; }
+            .search-results-grid { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 16px; }
         }
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
+        @media (min-width: 900px) {
+            .poster-card { width: 170px; }
+            .poster-img-wrap { width: 170px; height: 255px; }
+            .skel-poster { width: 170px; height: 255px; }
+            .row-header { padding: 0 36px; }
+            .poster-scroll { padding: 12px 24px 20px; scroll-padding: 0 24px; }
+            .hero-content { padding: 0 48px 44px; }
+            .hero-title { font-size: 52px; max-width: 58%; }
+            .hero-overview { max-width: 52%; font-size: 15px; }
+            .search-results-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
         }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1 class="greeting">Welcome, <span id="userName" class="greeting-name">Loading...</span></h1>
-        <p class="subtitle">Find your favorite movies and series.</p>
-    </div>
+<!-- REPAIR MODE OVERLAY -->
+<div class="repair-overlay" id="repairOverlay">
+    <div class="repair-icon">🔧</div>
+    <div class="repair-title">Under Maintenance</div>
+    <div class="repair-sub">Sorry for the inconvenience, we are under Maintenance. We'll be back soon!</div>
+</div>
 
-    <div class="search-container">
-        <div class="input-wrapper">
-            <input type="text" id="searchInput" placeholder="Titles, people, genres" onkeypress="handleEnter(event)" oninput="toggleClearIcon()">
-            <svg id="clearIcon" class="clear-icon" onclick="clearSearch()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
+<!-- NAVBAR -->
+<nav class="navbar" id="navbar">
+    <div class="nav-logo">HA Bots - Entertainment</div>
+    <div class="nav-right">
+        <button class="nav-search-toggle" id="searchToggle" onclick="openSearch()" title="Search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
+    </div>
+</nav>
+
+<!-- SEARCH OVERLAY -->
+<div class="search-overlay" id="searchOverlay">
+    <!-- Top bar: input + cancel always inline -->
+    <div class="search-top-bar">
+        <div class="search-field-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="search-field" id="searchField" type="text" placeholder="Movies, TV shows..." autocomplete="off">
         </div>
-        <button class="search-btn" onclick="performSearch(0)">Search</button>
+        <button class="search-close" onclick="closeSearch()">Cancel</button>
     </div>
-
-    <h2 id="sectionTitle" class="section-title">Recently Added</h2>
-    <div id="loader" class="loader">Loading files...</div>
-    <div id="results" class="results-container"></div>
-
-    <div id="pagination" class="pagination">
-        <button id="backBtn" class="page-btn" onclick="changePage('back')">Back</button>
-        <div id="pageIndicator" class="page-indicator">1/1</div>
-        <button id="nextBtn" class="page-btn" onclick="changePage('next')">Next</button>
+    <div class="search-results-grid" id="searchResultsGrid">
+        <div class="search-hint" style="grid-column:1/-1">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Search for movies and TV shows
+        </div>
     </div>
+</div>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.setBackgroundColor('#141414');
-        tg.setHeaderColor('#141414');
+<!-- HERO SECTION -->
+<section class="hero" id="hero">
+    <div class="hero-bg" id="heroBg"></div>
+    <div class="hero-gradient"></div>
+    <div class="hero-gradient-side"></div>
+    <div class="hero-content">
+        <div class="hero-badge">🔥 Trending</div>
+        <div class="hero-title" id="heroTitle">Loading...</div>
+        <div class="hero-meta" id="heroMeta"></div>
+        <div class="hero-overview" id="heroOverview"></div>
+        <button class="hero-btn" id="heroBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
+            Get Files
+        </button>
+        <div class="hero-dots" id="heroDots"></div>
+    </div>
+</section>
 
-        const user = tg.initDataUnsafe?.user;
-        const userNameElement = document.getElementById('userName');
-        
-        if (user && user.first_name) {
-            userNameElement.innerText = user.first_name;
-        } else {
-            userNameElement.innerText = "Guest";
+<!-- MAIN CONTENT ROWS -->
+<main class="main" id="main">
+
+    <!-- Trending Row -->
+    <section class="row-section fade-up">
+        <div class="row-header">
+            <div class="row-title"><span></span>Trending This Week</div>
+        </div>
+        <div class="poster-scroll" id="rowTrending">
+            <!-- skeleton -->
+            <div class="skel skel-poster"></div><div class="skel skel-poster"></div>
+            <div class="skel skel-poster"></div><div class="skel skel-poster"></div>
+            <div class="skel skel-poster"></div>
+        </div>
+    </section>
+
+    <!-- Popular Movies Row -->
+    <section class="row-section fade-up" style="animation-delay:0.08s">
+        <div class="row-header">
+            <div class="row-title"><span></span>Popular Movies</div>
+        </div>
+        <div class="poster-scroll" id="rowMovies">
+            <div class="skel skel-poster"></div><div class="skel skel-poster"></div>
+            <div class="skel skel-poster"></div><div class="skel skel-poster"></div>
+            <div class="skel skel-poster"></div>
+        </div>
+    </section>
+
+    <!-- Popular TV Row -->
+    <section class="row-section fade-up" style="animation-delay:0.16s">
+        <div class="row-header">
+            <div class="row-title"><span></span>Popular TV Shows</div>
+        </div>
+        <div class="poster-scroll" id="rowTV">
+            <div class="skel skel-poster"></div><div class="skel skel-poster"></div>
+            <div class="skel skel-poster"></div><div class="skel skel-poster"></div>
+            <div class="skel skel-poster"></div>
+        </div>
+    </section>
+
+    <!-- Top Rated Row -->
+    <section class="row-section fade-up" style="animation-delay:0.24s">
+        <div class="row-header">
+            <div class="row-title"><span></span>Top Rated</div>
+        </div>
+        <div class="poster-scroll" id="rowTopRated">
+            <div class="skel skel-poster"></div><div class="skel skel-poster"></div>
+            <div class="skel skel-poster"></div><div class="skel skel-poster"></div>
+            <div class="skel skel-poster"></div>
+        </div>
+    </section>
+
+</main>
+
+<!-- PREMIUM FOOTER -->
+<footer class="site-footer">
+    <div class="footer-logo">HA Bots - Entertainment</div>
+    <div class="footer-tagline">Your premium media discovery platform</div>
+    <div class="footer-divider"></div>
+    <div class="footer-links">
+        <a href="https://t.me/HA_Bots" class="footer-link" target="_blank">Telegram Channel</a>
+        <a href="https://t.me/HA_Bots_Support" class="footer-link" target="_blank">Support</a>
+        <a href="https://www.themoviedb.org" class="footer-link" target="_blank">TMDB</a>
+    </div>
+    <div class="footer-copy">&copy; <span id="footerYear"></span> HA Bots. All rights reserved.</div>
+    <div class="footer-powered">Powered by <a href="https://t.me/HA_Bots" target="_blank">HA Bots</a></div>
+    <div class="footer-tmdb">This product uses the TMDB API but is not endorsed or certified by TMDB.</div>
+</footer>
+
+<!-- FILE MODAL -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="handleBackdropClick(event)">
+    <div class="modal-sheet" id="modalSheet">
+        <div class="modal-handle"></div>
+        <div class="modal-header" id="modalHeader">
+            <div class="modal-poster-placeholder" id="modalPosterWrap">🎬</div>
+            <div class="modal-info" id="modalInfo"></div>
+            <button class="modal-close-btn" onclick="closeModal()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-divider"></div>
+        <div class="modal-files-label">Available Files</div>
+        <div class="modal-files" id="modalFiles"></div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── INIT ──────────────────────────────────────────────────────────────────
+const tg = window.Telegram?.WebApp;
+if (tg) {
+    tg.expand();
+    tg.setBackgroundColor('#0a0a0f');
+    tg.setHeaderColor('#0a0a0f');
+}
+const user = tg?.initDataUnsafe?.user;
+const userId = user?.id || 'unknown';
+let botUsername = '';
+
+// Auto-update copyright year
+document.getElementById('footerYear').textContent = new Date().getFullYear();
+
+// Navbar: always solid in Telegram Mini App, scroll-driven in browser
+const navEl = document.getElementById('navbar');
+if (tg) {
+    navEl.classList.add('solid'); // always opaque in Telegram
+} else {
+    window.addEventListener('scroll', () => {
+        navEl.classList.toggle('solid', window.scrollY > 20);
+    }, { passive: true });
+}
+
+// ── MOUSE-DRAG HORIZONTAL SCROLL (PC) ─────────────────────────────────────
+function enableDragScroll(el) {
+    let isDown = false, startX, scrollLeft;
+    el.addEventListener('mousedown', e => {
+        isDown = true; el.classList.add('active');
+        startX = e.pageX - el.offsetLeft;
+        scrollLeft = el.scrollLeft;
+        e.preventDefault();
+    });
+    el.addEventListener('mouseleave', () => { isDown = false; el.classList.remove('active'); });
+    el.addEventListener('mouseup',    () => { isDown = false; el.classList.remove('active'); });
+    el.addEventListener('mousemove', e => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - el.offsetLeft;
+        const walk = (x - startX) * 1.5;
+        el.scrollLeft = scrollLeft - walk;
+    });
+}
+// Apply to existing rows (also called after dynamic render)
+document.querySelectorAll('.poster-scroll').forEach(enableDragScroll);
+
+// ── HERO ──────────────────────────────────────────────────────────────────
+let heroItems = [];
+let heroIndex = 0;
+let heroTimer = null;
+
+function setHero(item) {
+    const bg = document.getElementById('heroBg');
+    const title = document.getElementById('heroTitle');
+    const meta = document.getElementById('heroMeta');
+    const overview = document.getElementById('heroOverview');
+    const btn = document.getElementById('heroBtn');
+
+    if (item.backdrop) {
+        bg.style.backgroundImage = `url('${item.backdrop}')`;
+        bg.style.opacity = '1';
+    } else {
+        bg.style.opacity = '0';
+    }
+    title.textContent = item.title;
+    overview.textContent = item.overview || '';
+    meta.innerHTML = `
+        ${item.rating > 0 ? `<span class="rating">⭐ ${item.rating}</span><span class="dot"></span>` : ''}
+        <span>${item.year || ''}</span>
+        ${item.year ? '<span class="dot"></span>' : ''}
+        <span style="text-transform:capitalize">${item.type === 'tv' ? 'TV Show' : 'Movie'}</span>
+    `;
+    btn.onclick = () => openModal(item);
+}
+
+function updateDots() {
+    const dots = document.getElementById('heroDots');
+    [...dots.children].forEach((d, i) => {
+        d.classList.toggle('active', i === heroIndex);
+    });
+}
+
+function startHeroRotation() {
+    if (heroItems.length <= 1) return;
+    clearInterval(heroTimer);
+    heroTimer = setInterval(() => {
+        heroIndex = (heroIndex + 1) % Math.min(heroItems.length, 6);
+        setHero(heroItems[heroIndex]);
+        updateDots();
+    }, 5000);
+}
+
+// ── RENDER ROW ────────────────────────────────────────────────────────────
+function renderRow(containerId, items) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = '';
+    items.forEach((item, i) => {
+        const card = document.createElement('div');
+        card.className = 'poster-card';
+        card.style.animationDelay = `${i * 0.04}s`;
+        const posterHTML = item.poster
+            ? `<img class="poster-img" src="${item.poster}" alt="${item.title}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'poster-placeholder\\'>🎬</div>'">`
+            : `<div class="poster-placeholder">🎬</div>`;
+        card.innerHTML = `
+            <div class="poster-img-wrap">
+                ${posterHTML}
+                ${item.rating > 0 ? `<div class="poster-rating">⭐ ${item.rating}</div>` : ''}
+                <div class="poster-type-badge">${item.type === 'tv' ? 'TV' : 'Movie'}</div>
+            </div>
+            <div class="poster-title">${item.title}</div>
+            ${item.year ? `<div class="poster-year">${item.year}</div>` : ''}
+        `;
+        card.onclick = () => openModal(item);
+        el.appendChild(card);
+    });
+}
+
+// ── LOAD HOME ─────────────────────────────────────────────────────────────
+async function loadHome() {
+    // Check repair mode first
+    try {
+        const rs = await fetch('/api/repair-status');
+        const rd = await rs.json();
+        if (rd.repair_mode) {
+            document.getElementById('repairOverlay').classList.add('show');
+            return;
         }
+    } catch(e) {}
 
-        const userId = user?.id || 'unknown';
+    try {
+        const resp = await fetch('/api/tmdb-trending');
+        const data = await resp.json();
+        botUsername = data.bot_username || botUsername;
 
-        let currentQuery = '';
-        let currentOffset = 0;
-        let nextOffset = null;
-        let botUsername = '';
-        let maxResultsPerPage = 10; // Default, will update from API
-
-        function handleEnter(e) {
-            if (e.key === 'Enter') performSearch(0);
-        }
-
-        function toggleClearIcon() {
-            const input = document.getElementById('searchInput');
-            const clearIcon = document.getElementById('clearIcon');
-            if (input.value.length > 0) {
-                clearIcon.style.display = 'block';
-            } else {
-                clearIcon.style.display = 'none';
-                performSearch(0); 
-            }
-        }
-
-        function clearSearch() {
-            const input = document.getElementById('searchInput');
-            input.value = '';
-            toggleClearIcon(); 
-            input.focus();
-            performSearch(0);
-        }
-
-        async function performSearch(offset = 0) {
-            const query = document.getElementById('searchInput').value.trim();
-            const sectionTitle = document.getElementById('sectionTitle');
-            
-            if (query.length > 0) {
-                sectionTitle.innerText = "Search Results";
-            } else {
-                sectionTitle.innerText = "Recently Added";
-            }
-
-            currentQuery = query;
-            currentOffset = offset;
-
-            document.getElementById('results').innerHTML = '';
-            document.getElementById('loader').style.display = 'block';
-            document.getElementById('pagination').style.display = 'none';
-
-            try {
-                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&offset=${offset}`);
-                const data = await response.json();
-                
-                botUsername = data.bot_username;
-                maxResultsPerPage = data.max_btn; 
-                
-                document.getElementById('loader').style.display = 'none';
-                renderResults(data);
-                renderPagination(data);
-                
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } catch (error) {
-                document.getElementById('loader').innerText = 'Connection error. Please try again.';
-            }
-        }
-
-        function renderResults(data) {
-            const resultsDiv = document.getElementById('results');
-            
-            if (!data.files || data.files.length === 0) {
-                resultsDiv.innerHTML = `
-                    <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
-                        <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
-                        <h3 style="color: white; margin-bottom: 8px;">No matching results</h3>
-                        <p>Explore more by checking your spelling or trying a different search term.</p>
-                    </div>`;
-                return;
-            }
-
-            data.files.forEach((file, index) => {
-                const card = document.createElement('div');
-                card.className = 'file-card';
-                card.style.animationDelay = `${index * 0.05}s`;
-                
-                card.innerHTML = `
-                    <div class="file-info">
-                        <span class="file-name">${file.name}</span>
-                        <span class="file-size">${file.size} HD</span>
-                    </div>
-                    <div class="get-icon">▶</div>
-                `;
-
-                card.onclick = () => {
-                    const payload = `file_${file.id}`;
-                    const link = `https://t.me/${botUsername}?start=${payload}`;
-                    
-                    if (userId === 'unknown') {
-                        window.open(link, '_blank');
-                    } else {
-                        tg.openTelegramLink(link);
-                        setTimeout(() => { tg.close(); }, 100);
-                    }
-                };
-
-                resultsDiv.appendChild(card);
+        // Hero
+        heroItems = (data.trending || []).filter(x => x.backdrop).slice(0, 6);
+        if (heroItems.length === 0) heroItems = (data.trending || []).slice(0, 6);
+        if (heroItems.length > 0) {
+            setHero(heroItems[0]);
+            // Build dots
+            const dotsEl = document.getElementById('heroDots');
+            dotsEl.innerHTML = '';
+            heroItems.slice(0, 6).forEach((_, i) => {
+                const d = document.createElement('div');
+                d.className = 'hero-dot' + (i === 0 ? ' active' : '');
+                d.onclick = () => { heroIndex = i; setHero(heroItems[i]); updateDots(); clearInterval(heroTimer); startHeroRotation(); };
+                dotsEl.appendChild(d);
             });
+            startHeroRotation();
         }
 
-        function renderPagination(data) {
-            const pagDiv = document.getElementById('pagination');
-            nextOffset = data.next_offset;
+        // Rows + re-apply drag scroll after populating
+        if (data.trending) { renderRow('rowTrending', data.trending); enableDragScroll(document.getElementById('rowTrending')); }
+        if (data.popular_movies) { renderRow('rowMovies', data.popular_movies); enableDragScroll(document.getElementById('rowMovies')); }
+        if (data.popular_tv) { renderRow('rowTV', data.popular_tv); enableDragScroll(document.getElementById('rowTV')); }
+        if (data.top_rated) { renderRow('rowTopRated', data.top_rated); enableDragScroll(document.getElementById('rowTopRated')); }
 
-            if (data.total_results <= data.max_btn) {
-                pagDiv.style.display = 'none';
-                return;
-            }
+    } catch(e) {
+        console.error('Failed to load home:', e);
+        document.getElementById('heroTitle').textContent = 'Failed to load';
+    }
+}
 
-            pagDiv.style.display = 'flex';
+// ── SEARCH ────────────────────────────────────────────────────────────────
+let searchTimer = null;
 
-            const totalPages = Math.ceil(data.total_results / data.max_btn);
-            const currentPage = Math.ceil(data.current_offset / data.max_btn) + 1;
+function openSearch() {
+    document.getElementById('searchOverlay').classList.add('open');
+    setTimeout(() => document.getElementById('searchField').focus(), 300);
+}
 
-            document.getElementById('pageIndicator').innerText = `Page ${currentPage} of ${totalPages}`;
+function closeSearch() {
+    document.getElementById('searchOverlay').classList.remove('open');
+    document.getElementById('searchField').value = '';
+    document.getElementById('searchResultsGrid').innerHTML = `
+        <div class="search-hint" style="grid-column:1/-1">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Search for movies and TV shows
+        </div>`;
+}
 
-            const backBtn = document.getElementById('backBtn');
-            if (data.current_offset > 0) {
-                backBtn.style.visibility = 'visible';
-                backBtn.disabled = false;
-            } else {
-                backBtn.style.visibility = 'hidden';
-            }
+// Close search on Escape
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSearch(); });
 
-            const nextBtn = document.getElementById('nextBtn');
-            if (nextOffset !== null) {
-                nextBtn.style.visibility = 'visible';
-                nextBtn.disabled = false;
-            } else {
-                nextBtn.style.visibility = 'hidden';
-            }
+document.getElementById('searchField').addEventListener('input', (e) => {
+    clearTimeout(searchTimer);
+    const q = e.target.value.trim();
+    if (!q) {
+        closeSearch();
+        openSearch();
+        return;
+    }
+    document.getElementById('searchResultsGrid').innerHTML = `
+        <div class="search-hint" style="grid-column:1/-1">
+            <div class="spinner"></div>Searching...
+        </div>`;
+    searchTimer = setTimeout(() => doSearch(q), 400);
+});
+
+document.getElementById('searchField').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeSearch();
+});
+
+async function doSearch(q) {
+    try {
+        const resp = await fetch(`/api/tmdb-search?q=${encodeURIComponent(q)}`);
+        const data = await resp.json();
+        const grid = document.getElementById('searchResultsGrid');
+        grid.innerHTML = '';
+        if (!data.results || data.results.length === 0) {
+            grid.innerHTML = `<div class="search-hint" style="grid-column:1/-1">No results found for "<b>${q}</b>"</div>`;
+            return;
         }
+        // Results count bar
+        const bar = document.createElement('div');
+        bar.className = 'search-meta-bar';
+        bar.style.gridColumn = '1 / -1';
+        bar.innerHTML = `Found <b>${data.results.length}</b> results for "<b>${q}</b>"`;
+        grid.appendChild(bar);
+        // Render premium cards using the same poster-card structure
+        data.results.forEach((item, idx) => {
+            const card = document.createElement('div');
+            card.className = 'poster-card';
+            card.style.animationDelay = `${Math.min(idx * 0.04, 0.5)}s`;
+            const posterHTML = item.poster
+                ? `<img class="poster-img" src="${item.poster}" alt="${item.title}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'poster-placeholder\\'>🎬</div>'">`
+                : `<div class="poster-placeholder">🎬</div>`;
+            card.innerHTML = `
+                <div class="poster-img-wrap">
+                    ${posterHTML}
+                    ${item.rating > 0 ? `<div class="poster-rating">⭐ ${item.rating}</div>` : ''}
+                    <div class="poster-type-badge">${item.type === 'tv' ? 'TV' : 'Movie'}</div>
+                </div>
+                <div class="poster-title">${item.title}</div>
+                ${item.year ? `<div class="poster-year">${item.year}</div>` : ''}
+            `;
+            card.onclick = () => { closeSearch(); openModal(item); };
+            grid.appendChild(card);
+        });
+    } catch(e) {
+        document.getElementById('searchResultsGrid').innerHTML = `<div class="search-hint" style="grid-column:1/-1">Search failed. Please try again.</div>`;
+    }
+}
 
-        function changePage(direction) {
-            if (direction === 'next' && nextOffset !== null) {
-                performSearch(nextOffset);
-            } else if (direction === 'back') {
-                let prevOffset = currentOffset - maxResultsPerPage;
-                if (prevOffset < 0) prevOffset = 0;
-                performSearch(prevOffset);
-            }
+// ── MODAL ─────────────────────────────────────────────────────────────────
+let currentItem = null;
+
+async function openModal(item) {
+    currentItem = item;
+    // Populate header
+    const posterWrap = document.getElementById('modalPosterWrap');
+    const info = document.getElementById('modalInfo');
+    if (item.poster) {
+        posterWrap.innerHTML = `<img class="modal-poster" src="${item.poster}" alt="${item.title}">`;
+    } else {
+        posterWrap.innerHTML = `<div class="modal-poster-placeholder">🎬</div>`;
+    }
+    
+    // Client-side Genre Lookup mapping
+    const genreMap = {
+        28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime',
+        99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History',
+        27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Sci-Fi',
+        10770: 'TV Movie', 53: 'Thriller', 10752: 'War', 37: 'Western',
+        10759: 'Action & Adventure', 10762: 'Kids', 10763: 'News', 10764: 'Reality',
+        10765: 'Sci-Fi & Fantasy', 10766: 'Soap', 10767: 'Talk', 10768: 'War & Politics'
+    };
+    let genrePills = '';
+    if (item.genres && item.genres.length > 0) {
+        genrePills = `<div class="modal-genres">` + item.genres.slice(0, 3).map(id => `<span class="genre-pill">${genreMap[id] || 'Media'}</span>`).join('') + `</div>`;
+    }
+    
+    info.innerHTML = `
+        <div class="modal-title">${item.title}</div>
+        <div class="modal-meta">
+            ${item.rating > 0 ? `<span class="rating">⭐ ${item.rating}</span>` : ''}
+            ${item.year ? `<span>${item.year}</span>` : ''}
+            <span style="text-transform:capitalize">${item.type === 'tv' ? 'TV Show' : 'Movie'}</span>
+        </div>
+        ${genrePills}
+        ${item.overview ? `<div class="modal-overview">${item.overview}</div>` : ''}
+    `;
+    // Show modal
+    document.getElementById('modalBackdrop').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    // Load files
+    await loadFilesForItem(item);
+}
+
+function closeModal() {
+    document.getElementById('modalBackdrop').classList.remove('open');
+    document.body.style.overflow = '';
+    currentItem = null;
+}
+
+function handleBackdropClick(e) {
+    if (e.target === document.getElementById('modalBackdrop')) closeModal();
+}
+
+async function loadFilesForItem(item) {
+    const filesEl = document.getElementById('modalFiles');
+    filesEl.innerHTML = `<div class="modal-loading"><div class="spinner"></div>Searching files...</div>`;
+    try {
+        const resp = await fetch(`/api/search?q=${encodeURIComponent(item.title)}&offset=0`);
+        const data = await resp.json();
+        botUsername = data.bot_username || botUsername;
+        if (!data.files || data.files.length === 0) {
+            filesEl.innerHTML = `
+                <div class="modal-empty">
+                    <div class="modal-empty-icon">📭</div>
+                    <div class="modal-empty-title">No files found</div>
+                    <div class="modal-empty-sub">We don't have files for "<b>${item.title}</b>" yet. Request it in our group!</div>
+                </div>`;
+            return;
         }
+        filesEl.innerHTML = '';
+        data.files.forEach(file => {
+            const el = document.createElement('div');
+            el.className = 'file-item';
+            el.innerHTML = `
+                <div class="file-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                </div>
+                <div class="file-item-info">
+                    <div class="file-item-name">${file.name}</div>
+                    <div class="file-item-size">${file.size}</div>
+                </div>
+                <div class="file-item-get">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                </div>
+            `;
+            el.onclick = () => getFile(file.id);
+            filesEl.appendChild(el);
+        });
+    } catch(e) {
+        filesEl.innerHTML = `<div class="modal-empty"><div class="modal-empty-icon">⚠️</div><div class="modal-empty-title">Error</div><div class="modal-empty-sub">Failed to load files.</div></div>`;
+    }
+}
 
-        // Trigger initial search on load
-        window.onload = () => {
-            performSearch(0);
-        };
-    </script>
+function getFile(fileId) {
+    const link = `https://t.me/${botUsername}?start=file_0_${fileId}`;
+    if (userId === 'unknown' || !tg?.openTelegramLink) {
+        window.open(link, '_blank');
+    } else {
+        tg.openTelegramLink(link);
+        setTimeout(() => { tg.close(); }, 200);
+    }
+    showToast('Opening Telegram...');
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', loadHome);
+</script>
+</body>
+</html>
+"""
+
+# ── NO TMDB KEY PAGE ──────────────────────────────────────────────────────
+no_tmdb_template = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebApp Unavailable</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body {
+            font-family:'Outfit',sans-serif; background:#0a0a0f; color:#fff;
+            min-height:100vh; display:flex; align-items:center; justify-content:center;
+            padding:30px 24px; text-align:center;
+            background-image: radial-gradient(ellipse at 50% 0%, rgba(229,9,20,0.08) 0%, transparent 60%);
+        }
+        .wrap { max-width:380px; }
+        .icon {
+            width:90px; height:90px; border-radius:24px; margin:0 auto 28px;
+            background:linear-gradient(135deg,#1a1a2e,#16213e);
+            border:1px solid rgba(229,9,20,0.3);
+            display:flex; align-items:center; justify-content:center; font-size:40px;
+            box-shadow: 0 0 40px rgba(229,9,20,0.1);
+        }
+        h1 { font-size:26px; font-weight:800; margin-bottom:12px; letter-spacing:-0.5px; }
+        p { font-size:15px; color:#888; line-height:1.7; }
+        code {
+            display:inline-block; background:#1e1e2a; color:#e50914;
+            padding:3px 10px; border-radius:6px; font-size:14px;
+            border:1px solid rgba(229,9,20,0.25); margin:4px 0;
+            font-family:monospace;
+        }
+        .divider {
+            width:60px; height:2px; background:linear-gradient(90deg,transparent,#e50914,transparent);
+            margin:24px auto;
+        }
+        .note { font-size:12px; color:#444; margin-top:16px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="icon">🔑</div>
+    <h1>WebApp Unavailable</h1>
+    <div class="divider"></div>
+    <p>The WebApp requires a <b>TMDB API Key</b> to function.</p>
+    <p style="margin-top:12px">If you're an admin, set the environment variable:</p>
+    <p style="margin-top:10px"><code>TMDB_API_KEY</code></p>
+    <p style="margin-top:14px; color:#555">Get your free API key at<br><span style="color:#e50914">themoviedb.org/settings/api</span></p>
+    <div class="note">This message is only shown when the key is not configured.</div>
+</div>
+<script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) { tg.expand(); tg.setBackgroundColor('#0a0a0f'); }
+</script>
 </body>
 </html>
 """

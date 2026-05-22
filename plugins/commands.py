@@ -17,6 +17,9 @@ import PTN
 
 @Client.on_message(filters.command("start") & filters.incoming)
 async def start(client, message):
+    if message.from_user.id not in ADMINS and await db.get_repair_mode():
+        return await message.reply_text("⚠️ <b>Sorry for the inconvenience, we are under Maintenance. We'll be back soon!</b>")
+        
     if message.chat.type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         if not await db.get_chat(message.chat.id):
             total = await client.get_chat_members_count(message.chat.id)
@@ -513,7 +516,7 @@ async def add_prm(bot, message):
     except:
         return await message.reply('Not valid days, use: 1d, 7d, 30d, 365d, etc...')
     try:
-        user = await bot.get_users(user_id)
+        user = await bot.get_users(int(user_id))
     except Exception as e:
         return await message.reply(f'Error: {e}')
     if user.id in ADMINS:
@@ -544,7 +547,7 @@ async def rm_prm(bot, message):
     except:
         return await message.reply('Usage: /rm_prm user_id')
     try:
-        user = await bot.get_users(user_id)
+        user = await bot.get_users(int(user_id))
     except Exception as e:
         return await message.reply(f'Error: {e}')
     if user.id in ADMINS:
@@ -635,3 +638,18 @@ async def off_pm_search(bot, message):
 async def on_pm_search(bot, message):
     await db.update_bot_sttgs('PM_SEARCH', True)
     await message.reply('Successfully turned on pm search for all users')
+
+
+@Client.on_message(filters.command('repairmode') & filters.user(ADMINS))
+async def repairmode(bot, message):
+    args = message.text.split()
+    if len(args) < 2 or args[1].lower() not in ['on', 'off']:
+        return await message.reply("<b>Repair Mode Usage:</b>\n<code>/repairmode on</code>  — Enable maintenance mode\n<code>/repairmode off</code> — Disable maintenance mode")
+    mode = args[1].lower()
+    if mode == 'on':
+        await db.set_repair_mode(True)
+        await message.reply("<b>Repair Mode Enabled!</b>\n\nUsers will see:\n<i>Sorry for the inconvenience, we are under Maintenance. We'll be back soon!</i>\n\nUse <code>/repairmode off</code> to disable.")
+    else:
+        await db.set_repair_mode(False)
+        await message.reply("<b>Repair Mode Disabled!</b>\n\nBot is back online. Users can search and get files normally.")
+

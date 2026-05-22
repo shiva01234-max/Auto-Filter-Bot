@@ -26,6 +26,10 @@ QUERY_CACHE = {}
 async def pm_search(client, message):
     if message.text.startswith("/"):
         return
+
+    if message.from_user.id not in ADMINS and await db.get_repair_mode():
+        return await message.reply_text("⚠️ <b>Sorry for the inconvenience, we are under Maintenance. We'll be back soon!</b>")
+    
     stg = await db.get_bot_sttgs()
     if not stg.get('PM_SEARCH'):
         return await message.reply_text('PM search was disabled!')
@@ -52,6 +56,16 @@ async def pm_search(client, message):
 async def group_search(client, message):
     chat_id = message.chat.id
     user_id = message.from_user.id if message and message.from_user else 0
+
+    if user_id not in ADMINS and await db.get_repair_mode():
+        k = await message.reply_text("⚠️ <b>Sorry for the inconvenience, we are under Maintenance. We'll be back soon!</b>")
+        await asyncio.sleep(10)
+        await k.delete()
+        try:
+            await message.delete()
+        except:
+            pass
+        return
     stg = await db.get_bot_sttgs()
     if stg.get('AUTO_FILTER'):
         if not user_id:

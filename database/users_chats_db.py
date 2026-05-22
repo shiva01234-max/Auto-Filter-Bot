@@ -250,4 +250,13 @@ class Database:
             return {}
         return stg
 
+    async def get_repair_mode(self):
+        stg = await self.stg.find_one({'id': BOT_ID})
+        if not stg:
+            return False
+        return stg.get('REPAIR_MODE', False)
+
+    async def set_repair_mode(self, value: bool):
+        await self.update_bot_sttgs('REPAIR_MODE', value)
+
 db = Database()

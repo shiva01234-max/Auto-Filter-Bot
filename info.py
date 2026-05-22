@@ -170,6 +170,4 @@ PAYMENT_TYPE = "UPI"  # can be changed to "Crypto (TRC20)" or "PayPal" or etc...
 TMDB_API_KEY = environ.get("TMDB_API_KEY", "")  # Get API key from here - https://www.themoviedb.org/settings/api
 if len(TMDB_API_KEY) == 0:
     logger.info('TMDB_API_KEY is missing')
-else:
     TMDB_API_KEY = None
-    
