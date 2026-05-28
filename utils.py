@@ -3,7 +3,6 @@ from pyrogram.errors import InputUserDeactivated, UserNotParticipant, FloodWait
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from info import LONG_IMDB_DESCRIPTION, ADMINS, IS_PREMIUM, TIME_ZONE, USE_CAPTION_FILTER, UPDATES_SEND_CHANNEL, FILMS_LINK
 from database.users_chats_db import db
-from database.ia_filterdb import Media
 import re
 import os
 import sys
@@ -12,7 +11,6 @@ from datetime import datetime
 import asyncio
 from shortzy import Shortzy
 
-# Script ko sahi jagah se import kar rahe hain taaki circular import na ho
 import script 
 
 logger = logging.getLogger(__name__)
@@ -22,7 +20,7 @@ class temp(object):
     BANNED_USERS = []
     BANNED_CHATS = []
     ME = None
-    CURRENT=None
+    CURRENT = None
     CANCEL = False
     MELCOW = {}
     U_NAME = None
@@ -51,14 +49,18 @@ def get_size(size):
     return f"{round(size, 2)} {units[i]}"
 
 def get_plan_name(user_id):
-    # Dummy function or logic based on your premium setup
     return "Premium" if IS_PREMIUM else "Free"
 
 def handle_next_back(query, current_page, total_pages):
-    # Logic for navigation buttons
     buttons = []
     if current_page > 1:
         buttons.append(InlineKeyboardButton("⬅️ Back", callback_data=f"next_{current_page - 1}"))
     if current_page < total_pages:
         buttons.append(InlineKeyboardButton("Next ➡️", callback_data=f"next_{current_page + 1}"))
     return buttons
+
+async def send_update(bot, message, text, reply_markup=None):
+    try:
+        await bot.send_message(chat_id=message.chat.id, text=text, reply_markup=reply_markup)
+    except Exception as e:
+        logger.error(f"Error in send_update: {e}")
