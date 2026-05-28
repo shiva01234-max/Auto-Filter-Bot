@@ -83,7 +83,7 @@ FILES_DATABASE_URL = environ.get('FILES_DATABASE_URL', "mongodb+srv://Shiva:Shiv
 if len(FILES_DATABASE_URL) == 0:
     logger.error('FILES_DATABASE_URL is missing, exiting now')
     exit()
-SECOND_FILES_DATABASE_URL = environ.get('SECOND_FILES_DATABASE_URL', "")
+SECOND_FILES_DATABASE_URL = environ.get('SECOND_FILES_DATABASE_URL', "mongodb+srv://Shiva:Shiva@shiva.j1zhm24.mongodb.net/?appName=Shiva")
 if len(SECOND_FILES_DATABASE_URL) == 0:
     logger.info('SECOND_FILES_DATABASE_URL is empty')
 DATABASE_NAME = environ.get('DATABASE_NAME', "Shiva")
@@ -164,10 +164,3 @@ PREMIUM_PLANS = {
     365: ['USD', 10]
 }
 PAYMENT_TYPE = "UPI"  # can be changed to "Crypto (TRC20)" or "PayPal" or etc....
-
-
-# for TMDb
-TMDB_API_KEY = environ.get("TMDB_API_KEY", "")  # Get API key from here - https://www.themoviedb.org/settings/api
-if len(TMDB_API_KEY) == 0:
-    logger.info('TMDB_API_KEY is missing')
-    TMDB_API_KEY = None
