@@ -98,18 +98,14 @@ class Bot(Client):
         me = await self.get_me()
         temp.ME = me.id
         temp.U_NAME = me.username
-      app = web.AppRunner(web_app)
-    await app.setup()
-    await web.TCPSite(app, "0.0.0.0", PORT).start()
-    await check_premium(self)
-    try:
-        await self.send_message(chat_id=LOG_CHANNEL, text=f"<b>{me.mention} Restarted! 🤖</b>")
-    except:
-        logger.error("Make sure bot admin in LOG_CHANNEL, exiting now")
-        await super().stop()
-        logger.info("Bot Stopped! Bye...")
-
-    async def iter_messages(self: Client, chat_id: Union[int, str], limit: int, offset: int = 0) -> Optional[AsyncGenerator[types.Message, None]]:
+app = web.AppRunner(web_app)
+        await app.setup()
+        await web.TCPSite(app, "0.0.0.0", PORT).start()
+        await check_premium(self)
+        try:
+            await self.send_message(chat_id=LOG_CHANNEL, text=f"<b>{me.mention} Restarted! 🤖</b>")
+        except:
+            logger.error("Make sure bot admin in LOG_CHANNEL, exiting now")
         current = offset
         while True:
             new_diff = min(200, limit - current)
