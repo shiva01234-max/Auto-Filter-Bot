@@ -87,7 +87,7 @@ def get_readable_time(seconds: int) -> str:
     elif len(time_list) > 0:
         up_time += time_list + ", " + time_list
     else:
-        up_time += time_list
+        up_time += time_list if time_list else "0s"
     return up_time
 
 def check_premium(user_id):
@@ -118,7 +118,6 @@ async def groups_broadcast_messages(chat_id, message):
     except Exception as e:
         return 500, f"{e}"
 
-# Extra functions jo commands.py maang raha hai:
 def get_poster(query):
     return None
 
@@ -148,3 +147,4 @@ def get_wish():
 
 def get_seconds(time_str):
     return 0
+    
