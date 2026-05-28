@@ -104,11 +104,11 @@ class Bot(Client):
         await app.setup()
         await web.TCPSite(app, "0.0.0.0", PORT).start()
 
-await check_premium(self)        
-try:await self.send_message(chat_id=LOG_CHANNEL, text=f"<b>{me.mention} Restarted! 🤖</b>")
-        except:
-            logger.error("Make sure bot admin in LOG_CHANNEL, exiting now")
-            exit()
+await check_premium(self)
+    try:
+        await self.send_message(chat_id=LOG_CHANNEL, text=f"<b>{me.mention} Restarted! 🤖</b>")
+    except:
+        logger.error("Make sure bot admin in LOG_CHANNEL, exiting now")
         logger.info(f"Bot [@{me.username}] and webapp [{URL}] is started now ✓")
 
     async def stop(self, **kwargs):
