@@ -9,7 +9,6 @@ from pymongo.errors import DuplicateKeyError, OperationFailure
 from info import USE_CAPTION_FILTER, FILES_DATABASE_URL, SECOND_FILES_DATABASE_URL, DATABASE_NAME, COLLECTION_NAME, MAX_BTN, DATA_DATABASE_URL
 import PTN, asyncio
 from database.users_chats_db import data_db
-from utils import send_update
 
 logger = logging.getLogger(__name__)
 
