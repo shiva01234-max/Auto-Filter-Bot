@@ -62,3 +62,35 @@ async def send_update(bot, message, text, reply_markup=None):
         await bot.send_message(chat_id=message.chat.id, text=text, reply_markup=reply_markup)
     except Exception as e:
         logger.error(f"Error in send_update: {e}")
+
+def get_readable_time(seconds: int) -> str:
+    """Bot jo time mang raha hai, usko convert karne ke liye"""
+    count = 0
+    up_time = ""
+    time_list = []
+    time_suffix_list = ["s", "m", "h", "days"]
+    while count < 4:
+        count += 1
+        if count < 3:
+            remainder, result = divmod(seconds, 60)
+        else:
+            remainder, result = divmod(seconds, 24)
+        if seconds == 0 and remainder == 0:
+            break
+        time_list.append(int(result))
+        seconds = int(remainder)
+    for i in range(len(time_list)):
+        time_list[i] = str(time_list[i]) + time_suffix_list[i]
+    if len(time_list) == 4:
+        up_time += time_list + ", " + time_list + ", " + time_list
+    elif len(time_list) == 3:
+        up_time += time_list + ", " + time_list + ", " + time_list
+    elif len(time_list) > 0:
+        up_time += time_list + ", " + time_list
+    else:
+        up_time += time_list
+    return up_time
+
+def check_premium(user_id):
+    """Premium user check karne ke liye dummy function"""
+    return IS_PREMIUM
