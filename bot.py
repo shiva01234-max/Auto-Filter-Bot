@@ -98,18 +98,14 @@ class Bot(Client):
         me = await self.get_me()
         temp.ME = me.id
         temp.U_NAME = me.username
-        temp.B_NAME = me.first_name
-        
-        app = web.AppRunner(web_app)
-        await app.setup()
-        await web.TCPSite(app, "0.0.0.0", PORT).start()
-await web.TCPSite(app, "0.0.0.0", PORT).start()
+      app = web.AppRunner(web_app)
+    await app.setup()
+    await web.TCPSite(app, "0.0.0.0", PORT).start()
     await check_premium(self)
     try:
         await self.send_message(chat_id=LOG_CHANNEL, text=f"<b>{me.mention} Restarted! 🤖</b>")
     except:
         logger.error("Make sure bot admin in LOG_CHANNEL, exiting now")
-    async def stop(self, **kwargs):
         await super().stop()
         logger.info("Bot Stopped! Bye...")
 
