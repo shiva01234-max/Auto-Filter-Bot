@@ -79,7 +79,7 @@ DATA_DATABASE_URL = environ.get('DATA_DATABASE_URL', "mongodb+srv://Shiva:Shiva@
 if len(DATA_DATABASE_URL) == 0:
     logger.error('DATA_DATABASE_URL is missing, exiting now')
     exit()
-FILES_DATABASE_URL = environ.get('FILES_DATABASE_URL', "")
+FILES_DATABASE_URL = environ.get('FILES_DATABASE_URL', "mongodb+srv://Shiva:Shiva@shiva.j1zhm24.mongodb.net/?appName=Shiva")
 if len(FILES_DATABASE_URL) == 0:
     logger.error('FILES_DATABASE_URL is missing, exiting now')
     exit()
