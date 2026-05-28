@@ -147,4 +147,3 @@ def get_wish():
 
 def get_seconds(time_str):
     return 0
-    
