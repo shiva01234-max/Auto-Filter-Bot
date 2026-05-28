@@ -64,7 +64,6 @@ async def send_update(bot, message, text, reply_markup=None):
         logger.error(f"Error in send_update: {e}")
 
 def get_readable_time(seconds: int) -> str:
-    """Bot jo time mang raha hai, usko convert karne ke liye"""
     count = 0
     up_time = ""
     time_list = []
@@ -92,5 +91,31 @@ def get_readable_time(seconds: int) -> str:
     return up_time
 
 def check_premium(user_id):
-    """Premium user check karne ke liye dummy function"""
     return IS_PREMIUM
+
+async def broadcast_messages(user_id, message):
+    """User ko broadcast bhejne ke liye"""
+    try:
+        await message.copy(chat_id=user_id)
+        return 200, None
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+        return await broadcast_messages(user_id, message)
+    except InputUserDeactivated:
+        logger.info(f"{user_id}-Deactivated")
+        return 404, "deleted"
+    except Exception as e:
+        logger.error(f"Error in broadcast: {e}")
+        return 500, f"{e}"
+
+async def groups_broadcast_messages(chat_id, message):
+    """Groups ko broadcast bhejne ke liye"""
+    try:
+        await message.copy(chat_id=chat_id)
+        return 200, None
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+        return await groups_broadcast_messages(chat_id, message)
+    except Exception as e:
+        logger.error(f"Error in group broadcast: {e}")
+        return 500, f"{e}"
