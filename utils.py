@@ -11,8 +11,6 @@ from datetime import datetime
 import asyncio
 from shortzy import Shortzy
 
-import script 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
