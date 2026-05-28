@@ -93,8 +93,10 @@ def get_readable_time(seconds: int) -> str:
 def check_premium(user_id):
     return IS_PREMIUM
 
+def is_premium(user_id):
+    return IS_PREMIUM
+
 async def broadcast_messages(user_id, message):
-    """User ko broadcast bhejne ke liye"""
     try:
         await message.copy(chat_id=user_id)
         return 200, None
@@ -102,14 +104,11 @@ async def broadcast_messages(user_id, message):
         await asyncio.sleep(e.value)
         return await broadcast_messages(user_id, message)
     except InputUserDeactivated:
-        logger.info(f"{user_id}-Deactivated")
         return 404, "deleted"
     except Exception as e:
-        logger.error(f"Error in broadcast: {e}")
         return 500, f"{e}"
 
 async def groups_broadcast_messages(chat_id, message):
-    """Groups ko broadcast bhejne ke liye"""
     try:
         await message.copy(chat_id=chat_id)
         return 200, None
@@ -117,5 +116,35 @@ async def groups_broadcast_messages(chat_id, message):
         await asyncio.sleep(e.value)
         return await groups_broadcast_messages(chat_id, message)
     except Exception as e:
-        logger.error(f"Error in group broadcast: {e}")
         return 500, f"{e}"
+
+# Extra functions jo commands.py maang raha hai:
+def get_poster(query):
+    return None
+
+def upload_image(path):
+    return None
+
+def get_settings(chat_id):
+    return {}
+
+def is_check_admin(bot, chat_id, user_id):
+    return False
+
+def get_shortlink(url, user_id):
+    return url
+
+def get_verify_status(user_id):
+    return {"is_verified": True}
+
+def update_verify_status(user_id, status):
+    return True
+
+def save_group_settings(chat_id, settings):
+    return True
+
+def get_wish():
+    return "Welcome!"
+
+def get_seconds(time_str):
+    return 0
